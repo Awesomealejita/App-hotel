@@ -6,6 +6,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { useHotel } from "../../lib/outlet";
 import { useRealtime } from "../../lib/useRealtime";
 import { errorMessage, fmtTime } from "../../lib/format";
+import { compressImage } from "../../lib/image";
 import { orderTypeLabel } from "../../lib/labels";
 import type { ChecklistItem, WorkOrder, WorkOrderNote } from "../../lib/types";
 import { Button, Spinner, Textarea, cx } from "../../components/ui";
@@ -85,9 +86,10 @@ export default function OrderDetail() {
     try {
       let photo_path: string | null = null;
       if (photo) {
-        const ext = photo.name.split(".").pop() || "jpg";
+        const image = await compressImage(photo);
+        const ext = image.type === "image/jpeg" ? "jpg" : photo.name.split(".").pop() || "jpg";
         photo_path = `${profile!.id}/${order.id}/${Date.now()}.${ext}`;
-        const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(photo_path, photo, { contentType: photo.type });
+        const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(photo_path, image, { contentType: image.type || photo.type });
         if (error) throw error;
       }
       const { error } = await supabase.from("work_order_notes").insert({

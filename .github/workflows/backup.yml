@@ -1,0 +1,50 @@
+# Copia de seguridad diaria de la base de datos (el plan gratuito de Supabase no la incluye).
+# La copia se CIFRA antes de subirla porque el repositorio es público:
+# sin BACKUP_PASSPHRASE nadie puede leerla. Se conserva 30 días en Actions → Artifacts.
+name: Supabase backup
+
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar secretos
+        id: check
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::Faltan los secretos SUPABASE_DB_URL / BACKUP_PASSPHRASE"; echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar cliente de PostgreSQL 17
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+
+      - name: Volcar y cifrar
+        if: steps.check.outputs.skip != 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          FILE="hotel-$(date -u +%Y-%m-%d).dump.gpg"
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" -Fc --no-owner --no-privileges \
+            -n public -n auth -n storage \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$BACKUP_PASSPHRASE" -o "$FILE"
+          ls -lh "$FILE"
+          echo "FILE=$FILE" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          name: ${{ env.FILE }}
+          path: ${{ env.FILE }}
+          retention-days: 30

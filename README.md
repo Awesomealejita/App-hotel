@@ -12,14 +12,15 @@ App web/móvil para un hotel de 15 habitaciones:
 
 ## Arquitectura (100 % gratuita para empezar)
 
-| Pieza | Tecnología | Plan gratuito |
+| Pieza | Tecnología | Servicio (gratis) |
 |---|---|---|
-| Frontend | React 19 + Vite + TypeScript + Tailwind CSS, PWA | Vercel / Netlify / Cloudflare Pages |
-| Base de datos | Supabase Postgres (RLS, triggers, funciones RPC) | Supabase Free (500 MB) |
+| Frontend | React 19 + Vite + TypeScript + Tailwind CSS, PWA | Cloudflare Pages (permite uso comercial) |
+| Base de datos | Supabase Postgres (RLS, triggers, funciones RPC) | Supabase Free (500 MB, sobra para años con 15 hab.) |
 | Login | Supabase Auth (email + contraseña) | incluido |
 | Tiempo real | Supabase Realtime (cambios de Postgres) | incluido |
-| Fotos de incidencias | Supabase Storage (bucket privado) | 1 GB |
+| Fotos de incidencias | Supabase Storage (bucket privado), comprimidas en el móvil | 1 GB (~5.000 fotos) |
 | Sincronización de canales | Supabase Edge Functions (Deno) + pg_cron | 500 k invocaciones/mes |
+| Copias de seguridad, keep-alive y CI | GitHub Actions | gratis |
 
 > **¿Y LangGraph?** No hace falta para la gestión del día a día: Supabase cubre datos, login y tiempo real. LangGraph tendría sentido más adelante para un *agente de IA* (p. ej. resumir automáticamente las observaciones de limpieza de la semana, proponer asignaciones o responder a huéspedes). Ver *Siguientes pasos*.
 
@@ -91,6 +92,35 @@ Automatismos en base de datos:
    A partir de aquí, el resto del personal se crea desde **Ajustes → Personal** en la app.
 6. (Opcional) Sincronización automática cada 15 min: sigue las instrucciones de `supabase/migrations/20261003000100_cron_sync.sql`.
 
+### Plan gratuito de Supabase: lo que hay que saber
+
+El proyecto está preparado para funcionar en el plan gratuito. Sus tres limitaciones y cómo se cubren:
+
+| Limitación | Solución incluida |
+|---|---|
+| El proyecto **se pausa tras 7 días sin actividad** | `.github/workflows/keepalive.yml` hace una petición cada 3 días. Con el hotel en uso diario no haría falta, pero protege en temporada baja. Si aun así se pausa, se reactiva desde el panel de Supabase en un par de minutos sin perder datos. |
+| **Sin copias de seguridad** | `.github/workflows/backup.yml` vuelca la base de datos cada noche, la **cifra** (el repositorio es público) y la guarda 30 días en *Actions → Artifacts*. |
+| **Correo limitado** (pocos emails por hora) | La app no depende del correo: los responsables crean al personal con contraseña desde *Ajustes → Personal*. Si alguien la olvida, un responsable la cambia desde el panel de Supabase (*Authentication → Users*). |
+
+Otros límites (500 MB de base de datos, 1 GB de fotos, 50.000 usuarios activos al mes, 2 proyectos) quedan muy lejos para un hotel de 15 habitaciones. Usa el segundo proyecto gratuito como entorno de pruebas.
+
+**Secretos de GitHub** (*Settings → Secrets and variables → Actions*):
+
+| Secreto | Valor |
+|---|---|
+| `SUPABASE_URL` | `https://<proyecto>.supabase.co` |
+| `SUPABASE_ANON_KEY` | la clave pública *anon* |
+| `SUPABASE_DB_URL` | *Connect → Session pooler* (cadena `postgresql://postgres.<ref>:<contraseña>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres`) |
+| `BACKUP_PASSPHRASE` | una contraseña larga que **guardes fuera de GitHub**: sin ella las copias no se pueden abrir |
+
+> Las tareas programadas de GitHub solo se ejecutan desde la rama principal (`main`): se activan al fusionar esta rama.
+
+**Restaurar una copia**: descarga el artefacto y ejecuta
+```bash
+gpg --decrypt hotel-AAAA-MM-DD.dump.gpg > hotel.dump
+pg_restore --clean --if-exists --no-owner -d "$SUPABASE_DB_URL" hotel.dump
+```
+
 ### 2. Frontend
 
 ```bash
@@ -99,11 +129,14 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
-### 3. Despliegue gratuito
+### 3. Despliegue gratuito (Cloudflare Pages)
 
-- **Vercel**: *Import project* → framework Vite → añade las dos variables `VITE_SUPABASE_*`. `vercel.json` ya incluye la regla SPA.
-- **Netlify / Cloudflare Pages**: build `npm run build`, carpeta `dist` (`public/_redirects` incluido).
-- Añade la URL final en Supabase → *Authentication → URL Configuration → Site URL*.
+1. En <https://dash.cloudflare.com> → *Workers & Pages → Create → Pages → Connect to Git* y elige este repositorio.
+2. Build command `npm run build`, output directory `dist`.
+3. Variables de entorno: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+4. Añade la URL final (o tu dominio) en Supabase → *Authentication → URL Configuration → Site URL*.
+
+`public/_redirects` ya incluye la regla para que funcionen las rutas de la app. (Vercel también funciona con `vercel.json`, pero su plan gratuito no permite uso comercial.)
 
 ### 4. Conectar Booking y Airbnb
 
@@ -135,6 +168,7 @@ Abre la URL en el móvil → menú del navegador → **Añadir a pantalla de ini
 ```bash
 npm run typecheck
 npm run build
+npm run build:demo   # mockup autocontenido con datos de ejemplo → demo/hotel-mockup.html
 ```
 
 ## Siguientes pasos sugeridos

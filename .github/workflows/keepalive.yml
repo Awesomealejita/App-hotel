@@ -1,0 +1,24 @@
+# Plan gratuito de Supabase: los proyectos se pausan tras 7 días sin actividad.
+# Esta tarea hace una petición ligera cada 3 días para que eso no ocurra
+# (por ejemplo en temporada baja o vacaciones del hotel).
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "17 6 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping a la API de Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::Faltan los secretos SUPABASE_URL / SUPABASE_ANON_KEY"; exit 0
+          fi
+          curl -fsS "$SUPABASE_URL/rest/v1/rooms?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o /dev/null -w "HTTP %{http_code}\n"
