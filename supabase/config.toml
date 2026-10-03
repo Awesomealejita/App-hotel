@@ -1,0 +1,15 @@
+project_id = "app-hotel"
+
+[auth]
+site_url = "http://localhost:5173"
+# El registro público está cerrado: los responsables dan de alta al personal
+enable_signup = false
+
+[functions.sync-ical]
+verify_jwt = false # valida internamente: JWT de responsable o CRON_SECRET
+
+[functions.ical-export]
+verify_jwt = false # lo consumen Booking/Airbnb; protegido por token por habitación
+
+[functions.invite-user]
+verify_jwt = true

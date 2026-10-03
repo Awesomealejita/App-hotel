@@ -1,0 +1,23 @@
+-- (Opcional) Sincronización automática de iCal cada 15 minutos.
+-- Requiere activar las extensiones pg_cron y pg_net (Database → Extensions)
+-- y guardar dos secretos en Vault (Project Settings → Vault):
+--   project_url  = https://<tu-proyecto>.supabase.co
+--   cron_secret  = el mismo valor que el secreto CRON_SECRET de las Edge Functions
+--
+-- Descomenta y ejecuta en el SQL Editor una vez configurado:
+--
+-- select cron.schedule(
+--   'sync-ical-every-15-min',
+--   '*/15 * * * *',
+--   $$
+--   select net.http_post(
+--     url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/sync-ical',
+--     headers := jsonb_build_object(
+--       'Content-Type', 'application/json',
+--       'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+--     ),
+--     body := '{}'::jsonb
+--   );
+--   $$
+-- );
+select 1;
