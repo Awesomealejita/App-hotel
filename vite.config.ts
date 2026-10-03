@@ -21,7 +21,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss(), ...(demo ? [demoSupabase()] : [])],
     ...(demo && {
-      define: { "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://demo.supabase.co") },
+      define: {
+        "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://demo.supabase.co"),
+        "import.meta.env.VITE_HOTEL_NAME": JSON.stringify("Hotel Demo"),
+      },
       build: {
         outDir: "dist-demo",
         assetsInlineLimit: 100_000,

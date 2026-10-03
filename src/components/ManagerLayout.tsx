@@ -1,9 +1,11 @@
 import logo from "../assets/icon.svg";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { BedDouble, CalendarRange, ClipboardList, LayoutDashboard, LogOut, Settings, Ticket } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider";
 import { useLookups } from "../lib/useLookups";
 import { useRealtime } from "../lib/useRealtime";
+import { supabase } from "../lib/supabase";
 import { orderStatusLabel } from "../lib/labels";
 import type { Reservation, WorkOrder, WorkOrderNote } from "../lib/types";
 import { useToast } from "./Toaster";
@@ -22,9 +24,19 @@ export default function ManagerLayout() {
   const { profile, signOut } = useAuth();
   const lookups = useLookups();
   const toast = useToast();
+  const [pending, setPending] = useState(0);
+
+  const loadPending = useCallback(async () => {
+    const { count } = await supabase.from("reservations").select("id", { count: "exact", head: true }).eq("status", "pending");
+    setPending(count ?? 0);
+  }, []);
+  useEffect(() => {
+    loadPending();
+  }, [loadPending]);
 
   // Notificaciones en tiempo real de lo que hacen las limpiadoras y de los canales
   useRealtime(["work_orders", "work_order_notes", "reservations"], (table, payload) => {
+    if (table === "reservations") loadPending();
     if (table === "work_orders" && payload.eventType === "UPDATE") {
       const n = payload.new as unknown as WorkOrder;
       const o = payload.old as Partial<WorkOrder>;
@@ -49,7 +61,11 @@ export default function ManagerLayout() {
     if (table === "reservations" && payload.eventType === "INSERT") {
       const r = payload.new as unknown as Reservation;
       if (r.status === "pending") {
-        toast({ title: "Nueva reserva pendiente", body: `${r.guest_name} · ${r.check_in} → ${r.check_out}`, tone: "warning" });
+        toast({
+          title: r.reference ? `Nueva solicitud desde la web (${r.reference})` : "Nueva reserva pendiente",
+          body: `${r.guest_name} · ${r.requested_room_type ? `${r.requested_room_type} · ` : ""}${r.check_in} → ${r.check_out}`,
+          tone: "warning",
+        });
       }
     }
   });
@@ -76,6 +92,7 @@ export default function ManagerLayout() {
             >
               <Icon className="h-4 w-4" />
               {label}
+              {to === "/reservas" && pending > 0 && <PendingBadge count={pending} className="ml-auto" />}
             </NavLink>
           ))}
         </nav>
@@ -105,6 +122,7 @@ export default function ManagerLayout() {
             >
               <Icon className="h-4 w-4" />
               {label}
+              {to === "/reservas" && pending > 0 && <PendingBadge count={pending} />}
             </NavLink>
           ))}
           <button onClick={signOut} className="ml-auto shrink-0 px-2 text-slate-500" aria-label="Cerrar sesión">
@@ -116,5 +134,13 @@ export default function ManagerLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+function PendingBadge({ count, className }: { count: number; className?: string }) {
+  return (
+    <span className={cx("min-w-5 rounded-full bg-amber-500 px-1.5 text-center text-[11px] leading-5 font-bold text-white", className)} title={`${count} pendientes de aceptar`}>
+      {count}
+    </span>
   );
 }

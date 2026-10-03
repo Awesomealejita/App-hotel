@@ -1,11 +1,12 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthProvider";
 import { isConfigured } from "./lib/supabase";
 import { Spinner } from "./components/ui";
 import CleanerLayout from "./components/CleanerLayout";
 import Login from "./pages/Login";
 import SetupNeeded from "./pages/SetupNeeded";
+import BookingRequest from "./pages/public/BookingRequest";
 import MyDay from "./pages/cleaner/MyDay";
 import OrderDetail from "./pages/cleaner/OrderDetail";
 
@@ -20,8 +21,11 @@ const SettingsPage = lazy(() => import("./pages/manager/Settings"));
 
 export default function App() {
   const { session, profile, loading, signOut } = useAuth();
+  const location = useLocation();
 
   if (!isConfigured) return <SetupNeeded />;
+  // Formulario público para huéspedes: accesible sin iniciar sesión
+  if (location.pathname.startsWith("/reservar")) return <BookingRequest />;
   if (loading) return <Spinner className="h-full" />;
   if (!session) {
     return (

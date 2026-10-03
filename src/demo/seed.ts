@@ -50,7 +50,7 @@ export function buildSeed() {
     const [room_type, capacity] = types[i % 5];
     return {
       id: `room-${i}`, number: `${floor}0${(i % 5) + 1}`, name: null, room_type, floor, capacity,
-      status: "clean", ical_token: "demo" + i, notes: null, active: true, updated_at: now.toISOString(),
+      status: "clean", ical_token: "demo" + i, base_price: types[i % 5][2], notes: null, active: true, updated_at: now.toISOString(),
     };
   });
   const price = (i: number) => types[i % 5][2];
@@ -60,6 +60,7 @@ export function buildSeed() {
     { id: "src-airbnb", name: "Airbnb", color: "#ff5a5f", auto_confirm: false },
     { id: "src-expedia", name: "Expedia", color: "#d39b00", auto_confirm: false },
     { id: "src-direct", name: "Directo", color: "#10b981", auto_confirm: true },
+    { id: "src-web", name: "Web del hotel", color: "#7c3aed", auto_confirm: false },
   ];
   const sourceFor = () => {
     const r = rnd();
@@ -79,7 +80,8 @@ export function buildSeed() {
       check_in: day(ci), check_out: day(co),
       status: status ?? (co <= 0 ? "checked_out" : ci <= 0 ? "checked_in" : "confirmed"),
       total_amount: roomIdx === null ? null : nightsN * (price(roomIdx) + int(-10, 25)),
-      notes: null, created_at: at(Math.min(ci, 0) - int(3, 40), 10, 0), updated_at: now.toISOString(),
+      notes: null, requested_room_type: null, reference: null,
+      created_at: at(Math.min(ci, 0) - int(3, 40), 10, 0), updated_at: now.toISOString(),
     };
     reservations.push(r);
     return r;
@@ -90,7 +92,9 @@ export function buildSeed() {
     // Habitaciones 0-5 tienen salida hoy; 6-10 tienen cliente alojado
     const departsToday = i <= 5;
     const inHouse = i >= 6 && i <= 10;
-    const futureStart = departsToday ? (i % 2 === 0 ? 0 : int(1, 3)) : inHouse ? -int(1, 3) : int(0, 4);
+    // 302, 303 y 305 quedan libres las próximas semanas: así el formulario web muestra disponibilidad
+    const freeSoon = i === 11 || i === 12 || i === 14;
+    const futureStart = departsToday ? (i % 2 === 0 ? 0 : int(1, 3)) : inHouse ? -int(1, 3) : freeSoon ? int(14, 18) : int(0, 4);
     let cursor = departsToday ? 0 : Math.min(futureStart, -int(0, 2));
     while (cursor > -95) {
       const n = int(1, 6);
@@ -101,12 +105,15 @@ export function buildSeed() {
     while (cursor < 45) {
       const n = int(1, 7);
       addRes(i, cursor, cursor + n);
-      cursor += n + int(0, 3);
+      cursor += n + int(1, 4);
     }
   });
   // Reservas pendientes de aceptar (llegan de los canales)
   addRes(13, 6, 9, "pending", "src-booking");
-  addRes(null, 3, 5, "pending", "src-airbnb");
+  Object.assign(addRes(null, 3, 5, "pending", "src-web"), {
+    guest_name: "Carmen Vidal", guest_email: "carmen.vidal@example.com", guest_phone: "655 010 203",
+    requested_room_type: "Suite", reference: "WEB-7K3P9Q", total_amount: 320, notes: "Llegaremos sobre las 22:00",
+  });
   addRes(null, 10, 14, "pending", "src-expedia");
   reservations.filter((r) => r.status === "confirmed" && r.check_in > day(7)).slice(0, 2).forEach((r) => (r.status = "pending"));
   reservations.filter((r) => r.status === "checked_out").slice(0, 3).forEach((r) => (r.status = "cancelled"));

@@ -260,13 +260,13 @@ function defaults(table: string): Row {
   const now = new Date().toISOString();
   switch (table) {
     case "reservations":
-      return { status: "pending", guests: 2, guest_name: "Huésped", external_uid: null, notes: null, total_amount: null, created_at: now, updated_at: now };
+      return { status: "pending", guests: 2, guest_name: "Huésped", external_uid: null, notes: null, total_amount: null, requested_room_type: null, reference: null, created_at: now, updated_at: now };
     case "work_orders":
       return { status: "pending", priority: "normal", order_type: "checkout_clean", checklist: [], rating: null, started_at: null, completed_at: null, verified_at: null, instructions: null, scheduled_date: today(), created_at: now, updated_at: now };
     case "work_order_notes":
       return { is_issue: false, photo_path: null, created_at: now };
     case "rooms":
-      return { status: "clean", active: true, ical_token: Math.random().toString(16).slice(2), notes: null, name: null, updated_at: now };
+      return { status: "clean", active: true, base_price: 85, ical_token: Math.random().toString(16).slice(2), notes: null, name: null, updated_at: now };
     case "checklist_templates":
       return { created_at: now, items: [] };
     default:
@@ -343,8 +343,50 @@ function dashboardStats(from: string, to: string) {
   };
 }
 
+function publicAvailability(from: string, to: string, guests: number) {
+  if (!from || !to || to <= from) throw err("La fecha de salida debe ser posterior a la de entrada");
+  if (from < today()) throw err("La fecha de entrada no puede ser anterior a hoy");
+  if (daysBetween(from, to).length > 30) throw err("Para estancias de más de 30 noches contacta con el hotel");
+  const groups = new Map<string, Row>();
+  for (const r of availableRooms(from, to).filter((x) => x.capacity >= Math.max(guests, 1))) {
+    const g = groups.get(r.room_type) ?? { room_type: r.room_type, capacity: 0, available: 0, price_per_night: Infinity };
+    g.capacity = Math.max(g.capacity, r.capacity);
+    g.available++;
+    g.price_per_night = Math.min(g.price_per_night, r.base_price);
+    groups.set(r.room_type, g);
+  }
+  return [...groups.values()].sort((a, b) => a.price_per_night - b.price_per_night);
+}
+
 function rpc(fn: string, a: Row): Row {
+  try {
+    return rpcInner(fn, a);
+  } catch (e) {
+    return { data: null, error: e };
+  }
+}
+
+function rpcInner(fn: string, a: Row): Row {
   switch (fn) {
+    case "public_availability":
+      return { data: publicAvailability(a.p_from, a.p_to, a.p_guests), error: null };
+    case "request_booking": {
+      const ref = "WEB-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      if (a.p_website) return { data: ref, error: null };
+      if (!a.p_name || a.p_name.trim().length < 2) throw err("Indica tu nombre");
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.p_email ?? "")) throw err("El email no es válido");
+      const opt = publicAvailability(a.p_check_in, a.p_check_out, a.p_guests).find((o) => o.room_type === a.p_room_type);
+      if (!opt) throw err("Ya no queda disponibilidad para ese tipo de habitación en esas fechas");
+      const row: Row = {
+        ...defaults("reservations"), id: newId("res"), room_id: null, source_id: "src-web", external_uid: ref, reference: ref,
+        guest_name: a.p_name.trim(), guest_email: a.p_email.trim().toLowerCase(), guest_phone: a.p_phone || null, guests: a.p_guests,
+        check_in: a.p_check_in, check_out: a.p_check_out, status: "pending", requested_room_type: a.p_room_type,
+        total_amount: opt.price_per_night * daysBetween(a.p_check_in, a.p_check_out).length, notes: a.p_notes || null,
+      };
+      db.reservations.push(row);
+      emit("reservations", "INSERT", row);
+      return { data: ref, error: null };
+    }
     case "available_rooms":
       return { data: clone(availableRooms(a.p_from, a.p_to, a.p_exclude_reservation)), error: null };
     case "dashboard_stats":

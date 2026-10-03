@@ -1,5 +1,6 @@
 import logo from "../assets/icon.svg";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Button, Field, Input } from "../components/ui";
 
@@ -34,6 +35,9 @@ export default function Login() {
         </Field>
         {error && <p className="rounded-lg bg-rose-50 p-2 text-sm text-rose-700">{error}</p>}
         <Button type="submit" loading={loading} className="w-full py-2.5">Entrar</Button>
+        <p className="text-center text-sm text-slate-500">
+          ¿Eres huésped? <Link to="/reservar" className="font-medium text-brand-700 hover:underline">Solicita una reserva</Link>
+        </p>
       </form>
     </div>
   );

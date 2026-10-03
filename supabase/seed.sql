@@ -9,8 +9,13 @@ insert into public.booking_sources (name, color, auto_confirm) values
   ('Booking.com', '#003580', false),
   ('Airbnb',      '#ff5a5f', false),
   ('Expedia',     '#f5b800', false),
-  ('Directo',     '#10b981', true)
+  ('Directo',     '#10b981', true),
+  ('Web del hotel', '#7c3aed', false)
 on conflict (name) do nothing;
+
+-- Precio orientativo por noche (se muestra en el formulario público)
+update public.rooms set base_price = case room_type
+  when 'Individual' then 65 when 'Twin' then 80 when 'Doble' then 85 when 'Triple' then 110 when 'Suite' then 160 else 85 end;
 
 insert into public.checklist_templates (name, order_type, items) values
   ('Limpieza de salida', 'checkout_clean', '[

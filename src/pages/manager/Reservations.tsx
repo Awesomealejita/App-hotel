@@ -98,7 +98,7 @@ export default function Reservations() {
                       {fmtDate(r.check_in, "d MMM")} → {fmtDate(r.check_out, "d MMM yy")}
                       <div className="text-xs text-slate-500">{nights(r.check_in, r.check_out)} noches</div>
                     </td>
-                    <td className="px-4 py-3">{r.room_id ? roomById.get(r.room_id)?.number : <span className="text-amber-700">Sin asignar</span>}</td>
+                    <td className="px-4 py-3">{r.room_id ? roomById.get(r.room_id)?.number : <span className="text-amber-700">Sin asignar{r.requested_room_type && <span className="block text-xs text-slate-500">pide {r.requested_room_type}</span>}</span>}</td>
                     <td className="px-4 py-3">{r.total_amount != null ? eur(r.total_amount) : "—"}</td>
                     <td className="px-4 py-3"><ReservationStatusBadge status={r.status} /></td>
                   </tr>

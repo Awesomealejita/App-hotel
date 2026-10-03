@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, MessageSquare, XCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { availableRooms, decideReservation } from "../lib/api";
-import { errorMessage, fmtDate, fmtDateTime, nights } from "../lib/format";
+import { errorMessage, eur, fmtDate, fmtDateTime, nights } from "../lib/format";
 import { orderStatusLabel, roomStatusLabel } from "../lib/labels";
 import type { Lookups } from "../lib/useLookups";
 import type { Reservation, ReservationStatus, Room, WorkOrder, WorkOrderNote } from "../lib/types";
@@ -33,7 +33,16 @@ export default function ReservationDetail({ reservation, onClose, onChanged, loo
   useEffect(() => {
     if (!reservation) return;
     setRoomId(reservation.room_id ?? "");
-    availableRooms(reservation.check_in, reservation.check_out, reservation.id).then(setFree).catch(() => setFree([]));
+    availableRooms(reservation.check_in, reservation.check_out, reservation.id)
+      .then((rooms) => {
+        setFree(rooms);
+        // Solicitud sin habitación: propone la primera libre del tipo que pidió el huésped
+        if (!reservation.room_id && reservation.status === "pending") {
+          const match = rooms.find((x) => x.room_type === reservation.requested_room_type && x.capacity >= reservation.guests);
+          if (match) setRoomId(match.id);
+        }
+      })
+      .catch(() => setFree([]));
   }, [reservation]);
 
   useEffect(() => {
@@ -103,18 +112,24 @@ export default function ReservationDetail({ reservation, onClose, onChanged, loo
             <dt className="text-slate-500">Huéspedes</dt><dd>{r.guests}</dd>
             {r.guest_phone && (<><dt className="text-slate-500">Teléfono</dt><dd>{r.guest_phone}</dd></>)}
             {r.guest_email && (<><dt className="text-slate-500">Email</dt><dd className="truncate">{r.guest_email}</dd></>)}
+            {r.requested_room_type && (<><dt className="text-slate-500">Tipo pedido</dt><dd className="font-medium">{r.requested_room_type}</dd></>)}
+            {r.reference && (<><dt className="text-slate-500">Referencia</dt><dd className="font-mono">{r.reference}</dd></>)}
+            {r.total_amount != null && (<><dt className="text-slate-500">Importe</dt><dd>{eur(r.total_amount)}</dd></>)}
           </dl>
           {r.notes && <p className="rounded-lg bg-slate-50 p-3 whitespace-pre-wrap text-slate-600">{r.notes}</p>}
 
           {r.status === "pending" && (
-            <Field label="Habitación" hint={`${free.length} habitaciones libres en esas fechas`}>
+            <Field label="Habitación" hint={`${free.length} habitaciones libres en esas fechas${r.requested_room_type ? ` · ★ = tipo que pidió el huésped` : ""}`}>
               <Select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
                 <option value="">— Elegir —</option>
-                {lookups.rooms.filter((x) => x.active).map((x) => {
+                {lookups.rooms
+                  .filter((x) => x.active)
+                  .sort((a, b) => Number(b.room_type === r.requested_room_type) - Number(a.room_type === r.requested_room_type))
+                  .map((x) => {
                   const ok = free.some((f) => f.id === x.id);
                   return (
                     <option key={x.id} value={x.id} disabled={!ok}>
-                      {x.number} · {x.room_type} ({x.capacity}p) {ok ? `· ${roomStatusLabel[x.status]}` : "· OCUPADA"}
+                      {x.room_type === r.requested_room_type ? "★ " : ""}{x.number} · {x.room_type} ({x.capacity}p) {ok ? `· ${roomStatusLabel[x.status]}` : "· OCUPADA"}
                     </option>
                   );
                 })}

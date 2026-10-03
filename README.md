@@ -2,6 +2,7 @@
 
 App web/móvil para un hotel de 15 habitaciones:
 
+- **Formulario de reservas para la web del hotel** (`/reservar`, sin cuenta, en español e inglés): el huésped elige fechas, ve los tipos de habitación libres con precio y envía su solicitud. Llega al momento a la responsable como reserva pendiente.
 - **Calendario unificado** con las reservas de Booking.com, Airbnb, Expedia… (sincronización iCal) y las directas.
 - **Aceptar / rechazar reservas** viendo la disponibilidad real, el estado de limpieza de la habitación y el último feedback de la limpiadora. Una restricción de base de datos impide el overbooking.
 - **Órdenes de trabajo** para las limpiadoras (manuales o generadas automáticamente a partir de las salidas del día), con checklist por tipo de limpieza.
@@ -38,6 +39,7 @@ App web/móvil para un hotel de 15 habitaciones:
 supabase/
   migrations/20261003000000_init.sql   # tablas, enums, RLS, triggers, RPC, realtime, storage
   migrations/20261003000100_cron_sync.sql  # (opcional) sincronización cada 15 min
+  migrations/20261003000200_public_booking.sql  # formulario público de reservas
   seed.sql                             # 15 habitaciones, canales, plantillas de checklist
   functions/sync-ical/                 # importa reservas de los canales
   functions/ical-export/               # exporta disponibilidad a los canales (anti-overbooking)
@@ -45,6 +47,7 @@ supabase/
 src/
   pages/manager/   Dashboard, Calendario, Reservas, Habitaciones, Órdenes, Ajustes
   pages/cleaner/   Mis tareas, Detalle de orden (checklist + observaciones)
+  pages/public/    Formulario de solicitud de reserva para huéspedes
 ```
 
 ### Modelo de datos
@@ -146,16 +149,23 @@ npm run dev              # http://localhost:5173
 
 > iCal es el estándar gratuito que ofrecen todas las OTAs, pero se actualiza cada 15-60 min y no trae precios ni datos del huésped. Para sincronización instantánea con tarifas, el siguiente paso es un *channel manager* con API (Beds24, Channex, Smoobu, Cloudbeds…), que encaja en la misma tabla `reservations`.
 
-### 5. Instalar en el móvil (limpiadoras)
+### 5. Formulario de reservas en la web del hotel
+
+En **Ajustes → Canales e iCal** tienes el enlace (`https://<tu-app>/reservar`) para compartirlo por WhatsApp, Instagram o Google Maps, y el código `<iframe>` para pegarlo en la web del hotel. Pon el precio orientativo de cada habitación en **Ajustes → Habitaciones** y el nombre del hotel en la variable `VITE_HOTEL_NAME`.
+
+Seguridad: el formulario solo puede consultar tipos de habitación libres y precios (función `public_availability`) y crear solicitudes pendientes (función `request_booking`); nunca ve reservas ni datos de otros huéspedes. Valida los datos, incluye un campo trampa contra robots y limita a 3 solicitudes por email y hora.
+
+### 6. Instalar en el móvil (limpiadoras)
 
 Abre la URL en el móvil → menú del navegador → **Añadir a pantalla de inicio**. Se abre a pantalla completa como una app.
 
 ## Uso diario
 
 **Responsable**
-1. *Reservas → Pendientes*: abre cada reserva, elige habitación (solo se ofrecen las libres), revisa el estado y las incidencias de la última limpieza y **Acepta** o **Rechaza**.
-2. *Órdenes → Generar por salidas* y asigna cada habitación a una limpiadora (o crea órdenes manuales: repaso, limpieza a fondo, mantenimiento).
-3. Sigue el avance en vivo (notificaciones, *Habitaciones*, *Dashboard*) y **Verifica** las habitaciones terminadas.
+1. Las solicitudes de la web y de los canales aparecen con un aviso y un contador naranja en *Reservas*.
+2. *Reservas → Pendientes*: abre cada reserva, elige habitación (solo se ofrecen las libres), revisa el estado y las incidencias de la última limpieza y **Acepta** o **Rechaza**.
+3. *Órdenes → Generar por salidas* y asigna cada habitación a una limpiadora (o crea órdenes manuales: repaso, limpieza a fondo, mantenimiento).
+4. Sigue el avance en vivo (notificaciones, *Habitaciones*, *Dashboard*) y **Verifica** las habitaciones terminadas.
 
 **Limpiadora**
 1. Abre la app: ve sus tareas de hoy ordenadas por prioridad.

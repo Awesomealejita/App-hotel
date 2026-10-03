@@ -156,12 +156,42 @@ function Channels() {
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ical-export?room=${r.id}&token=${r.ical_token}`;
 
   const copy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Enlace copiado", tone: "success" });
+    navigator.clipboard
+      .writeText(text)
+      .then(() => toast({ title: "Copiado", tone: "success" }))
+      .catch(() => toast({ title: "No se pudo copiar", body: "Selecciona el texto y cópialo a mano.", tone: "warning" }));
   };
+
+  const formUrl = `${window.location.origin}/reservar`;
+  const embed = `<iframe src="${formUrl}" style="width:100%;max-width:560px;height:900px;border:0" title="Reservar"></iframe>`;
 
   return (
     <div className="space-y-6">
+      <Card>
+        <h2 className="mb-1 font-semibold">Formulario de reservas para tu web</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Los huéspedes eligen fechas, ven los tipos de habitación libres con precio y envían su solicitud. Te llega al momento como reserva
+          pendiente (canal «Web del hotel») para que la aceptes y le asignes habitación.
+        </p>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div>
+            <p className="mb-1 text-xs font-medium text-slate-600">Enlace (para WhatsApp, Instagram, Google Maps…)</p>
+            <div className="flex gap-2">
+              <Input readOnly value={formUrl} onFocus={(e) => e.target.select()} />
+              <Button variant="secondary" onClick={() => copy(formUrl)}><Copy className="h-4 w-4" /></Button>
+            </div>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-slate-600">Código para insertarlo en la web del hotel</p>
+            <div className="flex gap-2">
+              <Input readOnly value={embed} onFocus={(e) => e.target.select()} className="font-mono text-xs" />
+              <Button variant="secondary" onClick={() => copy(embed)}><Copy className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </div>
+        <a href="/reservar" target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium text-brand-700 hover:underline">Ver el formulario →</a>
+      </Card>
+
       <Card>
         <h2 className="mb-1 font-semibold">Canales de venta</h2>
         <p className="mb-4 text-sm text-slate-500">Si activas “auto-confirmar”, las reservas de ese canal entran confirmadas; si no, quedan pendientes de que un responsable las acepte.</p>
@@ -327,7 +357,7 @@ function RoomsAdmin() {
     if (!editing) return;
     const payload = {
       number: editing.number, name: editing.name || null, room_type: editing.room_type,
-      floor: editing.floor, capacity: editing.capacity, notes: editing.notes || null, active: editing.active ?? true,
+      floor: editing.floor, capacity: editing.capacity, base_price: editing.base_price ?? 80, notes: editing.notes || null, active: editing.active ?? true,
     };
     const { error } = editing.id
       ? await supabase.from("rooms").update(payload).eq("id", editing.id)
@@ -343,11 +373,11 @@ function RoomsAdmin() {
     <Card>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold">Habitaciones ({rooms.filter((r) => r.active).length} activas)</h2>
-        <Button onClick={() => setEditing({ room_type: "Doble", floor: 1, capacity: 2, active: true })}><Plus className="h-4 w-4" /> Nueva</Button>
+        <Button onClick={() => setEditing({ room_type: "Doble", floor: 1, capacity: 2, base_price: 85, active: true })}><Plus className="h-4 w-4" /> Nueva</Button>
       </div>
       <table className="w-full text-sm">
         <thead className="text-left text-xs text-slate-500">
-          <tr><th className="pb-2 font-medium">Nº</th><th className="pb-2 font-medium">Tipo</th><th className="pb-2 font-medium">Planta</th><th className="pb-2 font-medium">Capacidad</th><th className="pb-2 font-medium">Activa</th><th /></tr>
+          <tr><th className="pb-2 font-medium">Nº</th><th className="pb-2 font-medium">Tipo</th><th className="pb-2 font-medium">Planta</th><th className="pb-2 font-medium">Capacidad</th><th className="pb-2 font-medium">Precio/noche</th><th className="pb-2 font-medium">Activa</th><th /></tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {rooms.map((r) => (
@@ -356,6 +386,7 @@ function RoomsAdmin() {
               <td className="py-2">{r.room_type}</td>
               <td className="py-2">{r.floor}</td>
               <td className="py-2">{r.capacity}</td>
+              <td className="py-2">{r.base_price != null ? `${Math.round(r.base_price)} €` : "—"}</td>
               <td className="py-2">{r.active ? "Sí" : "No"}</td>
               <td className="py-2 text-right"><Button variant="ghost" className="px-2 py-1" onClick={() => setEditing(r)}>Editar</Button></td>
             </tr>
@@ -369,6 +400,9 @@ function RoomsAdmin() {
             <Field label="Tipo"><Input required value={editing.room_type ?? ""} onChange={(e) => setEditing({ ...editing, room_type: e.target.value })} /></Field>
             <Field label="Planta"><Input type="number" value={editing.floor ?? 1} onChange={(e) => setEditing({ ...editing, floor: Number(e.target.value) })} /></Field>
             <Field label="Capacidad"><Input type="number" min={1} value={editing.capacity ?? 2} onChange={(e) => setEditing({ ...editing, capacity: Number(e.target.value) })} /></Field>
+            <Field label="Precio orientativo por noche (€)" hint="Se muestra en el formulario de reservas de la web">
+              <Input type="number" min={0} step="1" value={editing.base_price ?? 80} onChange={(e) => setEditing({ ...editing, base_price: Number(e.target.value) })} />
+            </Field>
             <div className="sm:col-span-2"><Field label="Notas internas"><Textarea rows={2} value={editing.notes ?? ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} /></Field></div>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} className="accent-brand-700" /> Activa (se puede vender)

@@ -23,6 +23,7 @@ export interface Room {
   capacity: number;
   status: RoomStatus;
   ical_token: string;
+  base_price: number;
   notes: string | null;
   active: boolean;
   updated_at: string;
@@ -59,6 +60,8 @@ export interface Reservation {
   status: ReservationStatus;
   total_amount: number | null;
   notes: string | null;
+  requested_room_type: string | null;
+  reference: string | null;
   created_at: string;
 }
 
@@ -120,4 +123,11 @@ export interface DashboardStats {
   avg_room_rating: number | null;
   by_cleaner: { name: string; done: number; total: number; avg_minutes: number | null; notes: number }[];
   issues_by_room: { room: string; issues: number }[];
+}
+
+export interface PublicAvailability {
+  room_type: string;
+  capacity: number;
+  available: number;
+  price_per_night: number;
 }
