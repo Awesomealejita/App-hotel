@@ -24,7 +24,12 @@ const session = () =>
 const isManager = () => db.profiles.find((p) => p.id === currentUser)?.role === "manager";
 const err = (message: string, code?: string) => ({ message, code });
 
+const actionListeners = new Set<(a: Row) => void>();
+
 function emit(table: string, eventType: "INSERT" | "UPDATE" | "DELETE", row: Row, old: Row = {}) {
+  // Para la prueba guiada: quién hizo qué
+  const action = { table, eventType, row: clone(row), old: clone(old), user: currentUser };
+  actionListeners.forEach((cb) => cb(action));
   // Diferido como en Realtime: llega después de la respuesta de la petición
   setTimeout(() => {
     for (const l of listeners) {
@@ -464,6 +469,10 @@ export const supabase = {
       authListeners.forEach((cb) => cb("SIGNED_IN", session()));
     },
     currentUser: () => currentUser,
+    onAction(cb: (a: Row) => void) {
+      actionListeners.add(cb);
+      return () => actionListeners.delete(cb);
+    },
   },
 };
 

@@ -15,7 +15,7 @@ function mulberry32(seed: number) {
 }
 
 export const DEMO_USERS = {
-  manager: "u-laura",
+  manager: "u-pilar",
   cleaner: "u-ana",
 };
 
@@ -34,7 +34,7 @@ export function buildSeed() {
   const id = (p: string) => `${p}-${++seq}`;
 
   const profiles: Row[] = [
-    { id: "u-laura", full_name: "Laura Martín", role: "manager", phone: "600 111 222", active: true },
+    { id: "u-pilar", full_name: "Mª Pilar Fernández", role: "manager", phone: "600 111 222", active: true },
     { id: "u-jorge", full_name: "Jorge Sanz", role: "manager", phone: "600 333 444", active: true },
     { id: "u-ana", full_name: "Ana Pérez", role: "cleaner", phone: "611 222 333", active: true },
     { id: "u-lucia", full_name: "Lucía Gómez", role: "cleaner", phone: "622 333 444", active: true },
@@ -153,7 +153,7 @@ export function buildSeed() {
     const h = int(10, 13), m = int(0, 59), dur = int(18, 48);
     const startIso = at(offset, h, m);
     const wo: Row = {
-      id: id("wo"), room_id: r.room_id, assigned_to: pick(cleaners), created_by: "u-laura", reservation_id: r.id,
+      id: id("wo"), room_id: r.room_id, assigned_to: pick(cleaners), created_by: "u-pilar", reservation_id: r.id,
       order_type: "checkout_clean", priority: "normal", scheduled_date: r.check_out, status: rnd() < 0.7 ? "verified" : "done",
       instructions: null, checklist: tpl("checkout_clean", true), rating: int(2, 5),
       started_at: startIso, completed_at: new Date(new Date(startIso).getTime() + dur * 60000).toISOString(),
@@ -180,7 +180,7 @@ export function buildSeed() {
     const arrivalSameDay = reservations.some((x) => x.room_id === r.room_id && x.check_in === day(0));
     const n = tpl("checkout_clean", false).length;
     const wo: Row = {
-      id: id("wo"), room_id: r.room_id, assigned_to: p.who, created_by: "u-laura", reservation_id: r.id,
+      id: id("wo"), room_id: r.room_id, assigned_to: p.who, created_by: "u-pilar", reservation_id: r.id,
       order_type: "checkout_clean", priority: arrivalSameDay ? "high" : "normal", scheduled_date: day(0), status: p.status,
       instructions: arrivalSameDay ? "Entrada hoy a las 15:00: prioridad." : null,
       checklist: tpl("checkout_clean", (i: number) => i < Math.round(p.progress * n)), rating: p.status === "pending" ? null : int(3, 5),
@@ -197,7 +197,7 @@ export function buildSeed() {
     .slice(0, 3)
     .forEach((r, k) => {
       workOrders.push({
-        id: id("wo"), room_id: r.room_id, assigned_to: cleaners[(k + 1) % 3], created_by: "u-laura", reservation_id: r.id,
+        id: id("wo"), room_id: r.room_id, assigned_to: cleaners[(k + 1) % 3], created_by: "u-pilar", reservation_id: r.id,
         order_type: "stayover", priority: "low", scheduled_date: day(0), status: "pending", instructions: k === 0 ? "No molestar antes de las 11:00" : null,
         checklist: tpl("stayover", false), rating: null, started_at: null, completed_at: null, verified_at: null, verified_by: null,
         created_at: at(0, 8, 0), updated_at: at(0, 8, 0),
@@ -205,7 +205,7 @@ export function buildSeed() {
     });
   // Mañana: una limpieza a fondo para Ana
   workOrders.push({
-    id: id("wo"), room_id: "room-4", assigned_to: "u-ana", created_by: "u-laura", reservation_id: null,
+    id: id("wo"), room_id: "room-4", assigned_to: "u-ana", created_by: "u-pilar", reservation_id: null,
     order_type: "deep_clean", priority: "normal", scheduled_date: day(1), status: "pending", instructions: "Limpieza trimestral de la suite.",
     checklist: tpl("deep_clean", false), rating: null, started_at: null, completed_at: null, verified_at: null, verified_by: null,
     created_at: at(0, 8, 0), updated_at: at(0, 8, 0),
