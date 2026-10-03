@@ -1,3 +1,4 @@
+import logo from "../assets/icon.svg";
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
 import { Button, Field, Input } from "../components/ui";
@@ -21,7 +22,7 @@ export default function Login() {
     <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-700 to-brand-800 p-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl">
         <div className="flex flex-col items-center gap-2 pb-2">
-          <img src="/icon.svg" className="h-14 w-14" alt="" />
+          <img src={logo} className="h-14 w-14" alt="" />
           <h1 className="text-xl font-bold">Hotel PMS</h1>
           <p className="text-sm text-slate-500">Gestión de reservas y limpieza</p>
         </div>

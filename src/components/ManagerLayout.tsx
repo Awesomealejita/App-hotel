@@ -1,3 +1,4 @@
+import logo from "../assets/icon.svg";
 import { NavLink, Outlet } from "react-router-dom";
 import { BedDouble, CalendarRange, ClipboardList, LayoutDashboard, LogOut, Settings, Ticket } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider";
@@ -57,7 +58,7 @@ export default function ManagerLayout() {
     <div className="flex min-h-full">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="flex items-center gap-2 px-5 py-5">
-          <img src="/icon.svg" className="h-8 w-8" alt="" />
+          <img src={logo} className="h-8 w-8" alt="" />
           <span className="font-bold">Hotel PMS</span>
         </div>
         <nav className="flex-1 space-y-1 px-3">

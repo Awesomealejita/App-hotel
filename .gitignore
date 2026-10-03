@@ -5,3 +5,4 @@ dist
 *.log
 supabase/.temp
 supabase/.branches
+dist-demo
