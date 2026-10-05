@@ -1,0 +1,29 @@
+{
+  "name": "verifactu-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API REST para enviar registros de facturación a la AEAT (VERI*FACTU)",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test --no-warnings test/*.test.ts"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.11.2",
+    "fastify": "^5.12.5",
+    "qrcode": "^1.5.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/qrcode": "^1.5.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
